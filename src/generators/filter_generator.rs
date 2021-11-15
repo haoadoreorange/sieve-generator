@@ -2,7 +2,7 @@ use crate::{
     common::{code_block, panic_on_empty},
     types::{FullFilter, PanicOnEmpty, Retirable, StringOrArray},
 };
-use std::{collections::BTreeMap, fmt};
+use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub struct FilterGenerator<'a> {
@@ -59,26 +59,20 @@ impl<'a> FilterGenerator<'a> {
             None
         };
 
-        self.filters
-            .insert(path.to_string(), FullFilter { localparts, labels });
+        self.filters.insert(
+            path.to_string(),
+            FullFilter {
+                localparts,
+                labels,
+                silent: full_filter.silent,
+            },
+        );
         self
     }
 
-    pub fn retire_with_unknown_filter(self) -> String {
-        self.retire() + " else {" + &code_block("\nfileinto \"Unknown\";") + "\n}"
-    }
-}
-
-impl Retirable for FilterGenerator<'_> {
-    fn retire(self) -> String {
-        self.to_string()
-    }
-}
-
-impl fmt::Display for FilterGenerator<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn transform_to_string(self) -> String {
         let mut result = "".to_string();
-        for (i, (path, full_filter)) in self.filters.iter().enumerate() {
+        for (i, (path, full_filter)) in self.filters.into_iter().enumerate() {
             result = result
                 + &if i == 0 {
                     format!("\n# {}\nif", self.name)
@@ -103,22 +97,56 @@ impl fmt::Display for FilterGenerator<'_> {
                     result
                 })
                 + &code_block({
+                    let mut all_keywords = vec![];
                     let mut result = "".to_string();
-                    if let Some(full_filter_labels) = &full_filter.labels {
-                        for (label, keywords) in full_filter_labels.iter() {
+                    if let Some(full_filter_labels) = full_filter.labels {
+                        for (label, mut keywords) in full_filter_labels.into_iter() {
                             result = result
                                 + "\nif header :contains \"subject\" "
-                                + &serde_json::to_string(keywords).unwrap()
+                                + &serde_json::to_string(&keywords).unwrap()
                                 + " {"
                                 + &code_block(format!("\nfileinto \"{}\";", label))
                                 + "\n}";
+                            if full_filter.silent.unwrap_or(false) {
+                                all_keywords.append(&mut keywords)
+                            }
                         }
                     }
-                    result
+                    let silent = "\naddflag \"\\\\Seen\";\nfileinto \"unread\";".to_string();
+                    if full_filter.silent.unwrap_or(false) {
+                        // TODO: add test silent
+                        if !result.is_empty() {
+                            "\nif header :contains \"subject\" ".to_string()
+                                + &serde_json::to_string(&all_keywords).unwrap()
+                                + " {"
+                                + &code_block(result)
+                                + "\n}"
+                                + " else {"
+                                + &code_block(silent)
+                                + "\n}"
+                        } else {
+                            silent
+                        }
+                    } else {
+                        result
+                    }
                 })
                 + "\n}";
         }
-        write!(f, "{}", result)
+        result
+    }
+
+    pub fn retire_with_unknown_filter(self) -> String {
+        self.retire()
+            + " else {"
+            + &code_block("\nfileinto \"Unknown\";\naddflag \"\\\\Seen\";\nfileinto \"unread\";")
+            + "\n}"
+    }
+}
+
+impl Retirable for FilterGenerator<'_> {
+    fn retire(self) -> String {
+        self.transform_to_string()
     }
 }
 
@@ -126,6 +154,7 @@ impl fmt::Display for FilterGenerator<'_> {
 mod tests {
     use super::Retirable;
 
+    // TODO: add silent test
     #[test]
     fn filter_generator() {
         let mut fg = super::FilterGenerator::new("Test filter generator", "@domain/".to_string());
@@ -137,6 +166,7 @@ mod tests {
                     "custom".to_string(),
                 ]),
                 labels: None,
+                silent: None,
             },
         )
         .generate(
@@ -147,6 +177,7 @@ mod tests {
                     "custom".to_string(),
                 ]),
                 labels: None,
+                silent: None,
             },
         );
         assert_eq!(
@@ -173,6 +204,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
             super::FullFilter {
                 localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
                 labels: None,
+                silent: None,
             },
         );
     }
@@ -185,6 +217,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
             super::FullFilter {
                 localparts: super::StringOrArray::String("".to_string()),
                 labels: None,
+                silent: None,
             },
         );
         assert_eq!(fg.retire(), "");
@@ -200,6 +233,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
             super::FullFilter {
                 localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
                 labels: Some(labels),
+                silent: None,
             },
         );
     }

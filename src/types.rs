@@ -12,6 +12,7 @@ pub enum StringOrArray {
 pub struct FullFilter<T> {
     pub localparts: T,
     pub labels: Option<BTreeMap<String, T>>,
+    pub silent: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

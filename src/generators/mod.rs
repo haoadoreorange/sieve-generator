@@ -38,8 +38,14 @@ impl DomainGenerator<'_> {
         }
     }
 
-    fn _generate(&mut self, sub_config: SieveDomainConfig, path: &str, fakeroot_path: &str) {
-        let mut discard = false;
+    fn _generate(
+        &mut self,
+        sub_config: SieveDomainConfig,
+        path: &str,
+        fakeroot_path: &str,
+        mut parent_silent: bool,
+    ) {
+        let mut skip_generic = false;
         let mut labels = None;
         // Custom filter
         match sub_config {
@@ -49,6 +55,7 @@ impl DomainGenerator<'_> {
                     FullFilter {
                         localparts: StringOrArray::String(s),
                         labels: None,
+                        silent: Some(parent_silent),
                     },
                 );
             }
@@ -58,17 +65,25 @@ impl DomainGenerator<'_> {
                     FullFilter {
                         localparts: StringOrArray::Array(l),
                         labels: None,
+                        silent: Some(parent_silent),
                     },
                 );
             }
             SieveDomainConfig::FullFilter(full_filter) => {
                 labels = full_filter.labels.clone();
+                parent_silent = full_filter.silent.unwrap_or(parent_silent);
                 self.custom_filter_generator.generate(path, full_filter);
             }
             SieveDomainConfig::Object(mut o) => {
+                if path == "Unknown" {
+                    skip_generic = true; // No need to have generic filter for Unknown
+                }
                 let mut fakeroot = false;
                 if let Some(SieveDomainConfig::Boolean(b)) = o.remove("fakeroot") {
                     fakeroot = b;
+                }
+                if let Some(SieveDomainConfig::Boolean(b)) = o.remove("silent") {
+                    parent_silent = b; // TODO: add test parent silent
                 }
                 for (sub, next_sub_config) in o.drain() {
                     if sub.is_empty() {
@@ -83,16 +98,23 @@ impl DomainGenerator<'_> {
                     } else if sub == "self" {
                         // if self field exist, generic filter generator for current path will be run again
                         // in next recursive with more detailed info BEFORE the current recursive,
-                        // hence making the current obsolete. Not discarding it will result in
+                        // hence making the current obsolete. Not skipping it will result in
                         // obsolete filter overwrite more detailed filter
                         // TODO: add test for this case
-                        discard = true;
+                        skip_generic = true;
                         path
                     } else {
                         tmp = format!("{}/{}", path, sub);
                         &tmp
                     };
-                    self._generate(next_sub_config, new_path, if fakeroot { &sub } else { "" });
+                    // fakeroot only take the latest fakeroot
+                    // TODO: add parents's fakeroot
+                    self._generate(
+                        next_sub_config,
+                        new_path,
+                        if fakeroot { &sub } else { "" },
+                        parent_silent,
+                    );
                 }
             }
             _ => {
@@ -101,7 +123,7 @@ impl DomainGenerator<'_> {
         }
 
         // Generic filter
-        if !path.is_empty() && !discard {
+        if !path.is_empty() && !skip_generic {
             let mut prefix_generic_lps = vec![path_to_prefix_generic_localpart(path)];
             if !fakeroot_path.is_empty() {
                 prefix_generic_lps.push(path_to_prefix_generic_localpart(fakeroot_path));
@@ -123,13 +145,14 @@ impl DomainGenerator<'_> {
                             .concat(),
                     ),
                     labels,
+                    silent: Some(parent_silent),
                 },
             );
         }
     }
 
     pub fn generate(&mut self, sieve_domain_config: SieveDomainConfig) -> &mut Self {
-        self._generate(sieve_domain_config, "", "");
+        self._generate(sieve_domain_config, "", "", false);
         self
     }
 }
