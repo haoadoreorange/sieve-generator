@@ -11,7 +11,7 @@ lazy_static! {
     });
 }
 
-pub fn code_block<T: Into<String>>(s: T) -> String {
+pub fn code_block<T: AsRef<str>>(s: T) -> String {
     indentasy::indent(s, 1, 4)
 }
 

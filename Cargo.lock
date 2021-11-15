@@ -63,9 +63,9 @@ dependencies = [
 
 [[package]]
 name = "indentasy"
-version = "0.0.3"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbc5d342a677a2fbf33165350c59f9bb6ffd5e486682ac451575e557928fcce8"
+checksum = "b7839a574b846d2fb22206f2f0cec3358fa92565b95b39fe2b69924c65c933ca"
 dependencies = [
  "regex",
 ]
