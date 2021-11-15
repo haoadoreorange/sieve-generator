@@ -183,33 +183,40 @@ mod tests {
 if envelope :localpart :matches "to" ["finance.slyth","finance.slyth.*"] {
     fileinto "Finance";
 } elsif envelope :localpart :matches "to" ["finance.bank.slyth","finance.bank.slyth.*","bank.slyth","bank.slyth.*"] {
+    fileinto "Finance";
     fileinto "Finance/Bank";
     if header :contains "subject" ["statement"] {
         fileinto "statement";
     }
 } elsif envelope :localpart :matches "to" ["finance.bank2.slyth","finance.bank2.slyth.*","bank2.slyth","bank2.slyth.*"] {
+    fileinto "Finance";
     fileinto "Finance/Bank2";
     if header :contains "subject" ["statement"] {
         fileinto "statement";
     }
 } elsif envelope :localpart :matches "to" ["finance.stock-markets.slyth","finance.stock-markets.slyth.*","stock-markets.slyth","stock-markets.slyth.*"] {
+    fileinto "Finance";
     fileinto "Finance/Stock markets";
 } elsif envelope :localpart :matches "to" ["newsletter.slyth","newsletter.slyth.*"] {
     fileinto "Newsletter";
 } elsif envelope :localpart :matches "to" ["newsletter.business.slyth","newsletter.business.slyth.*"] {
+    fileinto "Newsletter";
     fileinto "Newsletter/Business";
 } else {
     fileinto "Unknown";
 }
 # Custom Filters
 if envelope :localpart :matches "to" ["bank-account"] {
+    fileinto "Finance";
     fileinto "Finance/Bank";
     if header :contains "subject" ["statement"] {
         fileinto "statement";
     }
 } elsif envelope :localpart :matches "to" ["broker1","broker2"] {
+    fileinto "Finance";
     fileinto "Finance/Stock markets";
 } elsif envelope :localpart :matches "to" ["wallstreet"] {
+    fileinto "Newsletter";
     fileinto "Newsletter/Business";
 }"#
         );

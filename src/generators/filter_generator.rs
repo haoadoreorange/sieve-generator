@@ -59,10 +59,8 @@ impl<'a> FilterGenerator<'a> {
             None
         };
 
-        self.filters.insert(
-            [&self.domain_folder, path].concat(),
-            FullFilter { localparts, labels },
-        );
+        self.filters
+            .insert(path.to_string(), FullFilter { localparts, labels });
         self
     }
 
@@ -90,7 +88,20 @@ impl fmt::Display for FilterGenerator<'_> {
                 + " envelope :localpart :matches \"to\" "
                 + &serde_json::to_string(&full_filter.localparts).unwrap()
                 + " {"
-                + &code_block(format!("\nfileinto \"{}\";", &path))
+                + &code_block({
+                    let mut cumulated_path = "".to_string();
+                    let mut result = "".to_string();
+                    for folder in path.split('/').collect::<Vec<_>>() {
+                        if cumulated_path.is_empty() {
+                            cumulated_path = folder.to_string();
+                        } else {
+                            cumulated_path = format!("{}/{}", cumulated_path, folder);
+                        }
+                        result = result
+                            + &format!("\nfileinto \"{}{}\";", self.domain_folder, cumulated_path)
+                    }
+                    result
+                })
                 + &code_block({
                     let mut result = "".to_string();
                     if let Some(full_filter_labels) = &full_filter.labels {
@@ -143,8 +154,10 @@ mod tests {
             r#"
 # Test filter generator
 if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
+    fileinto "@domain/Home bills";
     fileinto "@domain/Home bills/electricity";
 } elsif envelope :localpart :matches "to" ["home-bills.grocery","custom"] {
+    fileinto "@domain/Home bills";
     fileinto "@domain/Home bills/grocery";
 } else {
     fileinto "Unknown";
