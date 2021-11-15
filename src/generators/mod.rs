@@ -39,6 +39,7 @@ impl DomainGenerator<'_> {
     }
 
     fn _generate(&mut self, sub_config: SieveDomainConfig, path: &str, fakeroot_path: &str) {
+        let mut discard = false;
         let mut labels = None;
         // Custom filter
         match sub_config {
@@ -69,23 +70,29 @@ impl DomainGenerator<'_> {
                 if let Some(SieveDomainConfig::Boolean(b)) = o.remove("fakeroot") {
                     fakeroot = b;
                 }
-                for (sub, next_current) in o.drain() {
+                for (sub, next_sub_config) in o.drain() {
                     if sub.is_empty() {
                         panic!("Oups...the string '{}' cannot be used for folder name", sub);
                     }
-                    let mut _lazy_new_path: String;
+                    let tmp: String;
                     let new_path = if path.is_empty() {
                         if sub == "self" {
                             panic!("Sorry baby ): 'self' field is not supported at domain level");
                         }
                         &sub
                     } else if sub == "self" {
+                        // if self field exist, generic filter generator for current path will be run again
+                        // in next recursive with more detailed info BEFORE the current recursive,
+                        // hence making the current obsolete. Not discarding it will result in
+                        // obsolete filter overwrite more detailed filter
+                        // TODO: add test for this case
+                        discard = true;
                         path
                     } else {
-                        _lazy_new_path = format!("{}/{}", path, sub);
-                        &_lazy_new_path
+                        tmp = format!("{}/{}", path, sub);
+                        &tmp
                     };
-                    self._generate(next_current, new_path, if fakeroot { &sub } else { "" });
+                    self._generate(next_sub_config, new_path, if fakeroot { &sub } else { "" });
                 }
             }
             _ => {
@@ -94,7 +101,7 @@ impl DomainGenerator<'_> {
         }
 
         // Generic filter
-        if !path.is_empty() {
+        if !path.is_empty() && !discard {
             let mut prefix_generic_lps = vec![path_to_prefix_generic_localpart(path)];
             if !fakeroot_path.is_empty() {
                 prefix_generic_lps.push(path_to_prefix_generic_localpart(fakeroot_path));
