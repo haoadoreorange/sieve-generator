@@ -1,0 +1,23 @@
+{
+  "domain.com": {
+    "options": {
+      "domain-as-first-folder": false,
+      "secrets": ["secret"]
+    },
+    "Newsletter": {
+      "Software": ["google", "facebook"],
+      "Business": "wallstreet"
+    },
+    "Utilities": {
+      "fakeroot": true,
+      "Grocery": {
+        "localparts": "market",
+        "labels": {
+          "label": "keyword",
+          "label2": ["keyword2"]
+        }
+      },
+      "GenericOnly": ""
+    }
+  }
+}
