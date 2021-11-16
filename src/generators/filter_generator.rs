@@ -9,14 +9,16 @@ pub struct FilterGenerator<'a> {
     name: &'a str,
     domain_folder: String,
     filters: BTreeMap<String, FullFilter<Vec<String>>>,
+    begin_with_else: bool,
 }
 
 impl<'a> FilterGenerator<'a> {
-    pub fn new(name: &'a str, domain_folder: String) -> FilterGenerator<'a> {
+    pub fn new(name: &'a str, domain_folder: String, begin_with_else: bool) -> FilterGenerator<'a> {
         FilterGenerator {
             name,
             domain_folder,
             filters: BTreeMap::new(),
+            begin_with_else,
         }
     }
 
@@ -75,7 +77,11 @@ impl<'a> FilterGenerator<'a> {
         for (i, (path, full_filter)) in self.filters.into_iter().enumerate() {
             result = result
                 + &if i == 0 {
-                    format!("\n# {}\nif", self.name)
+                    format!(
+                        "\n# {}\n{}if",
+                        self.name,
+                        if self.begin_with_else { "els" } else { "" }
+                    )
                 } else {
                     " elsif".to_string()
                 }
@@ -91,8 +97,13 @@ impl<'a> FilterGenerator<'a> {
                         } else {
                             cumulated_path = format!("{}/{}", cumulated_path, folder);
                         }
-                        result = result
-                            + &format!("\nfileinto \"{}{}\";", self.domain_folder, cumulated_path)
+                        if cumulated_path != "Unknown" {
+                            result = result
+                                + &format!(
+                                    "\nfileinto \"{}{}\";",
+                                    self.domain_folder, cumulated_path
+                                )
+                        }
                     }
                     result
                 })
@@ -139,7 +150,7 @@ impl<'a> FilterGenerator<'a> {
     pub fn retire_with_unknown_filter(self) -> String {
         self.retire()
             + " else {"
-            + &code_block("\nfileinto \"Unknown\";\naddflag \"\\\\Seen\";\nfileinto \"unread\";")
+            + &code_block("\nfileinto \"Unknown\";\naddflag \"\\\\Seen\";")
             + "\n}"
     }
 }
@@ -157,7 +168,8 @@ mod tests {
     // TODO: add silent test
     #[test]
     fn filter_generator() {
-        let mut fg = super::FilterGenerator::new("Test filter generator", "@domain/".to_string());
+        let mut fg =
+            super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false);
         fg.generate(
             "Home bills/electricity",
             super::FullFilter {
@@ -199,19 +211,21 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
     #[test]
     #[should_panic(expected = "Folder path is empty")]
     fn filter_generator_panic_empty_path() {
-        super::FilterGenerator::new("Test filter generator", "@domain/".to_string()).generate(
-            "",
-            super::FullFilter {
-                localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
-                labels: None,
-                silent: None,
-            },
-        );
+        super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false)
+            .generate(
+                "",
+                super::FullFilter {
+                    localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
+                    labels: None,
+                    silent: None,
+                },
+            );
     }
 
     #[test]
     fn filter_generator_empty_lp() {
-        let mut fg = super::FilterGenerator::new("Test filter generator", "@domain/".to_string());
+        let mut fg =
+            super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false);
         fg.generate(
             "path",
             super::FullFilter {
@@ -228,13 +242,14 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
     fn filter_generator_panic_label_empty() {
         let mut labels = super::BTreeMap::new();
         labels.insert("".to_string(), super::StringOrArray::String("".to_string()));
-        super::FilterGenerator::new("Test filter generator", "@domain/".to_string()).generate(
-            "path",
-            super::FullFilter {
-                localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
-                labels: Some(labels),
-                silent: None,
-            },
-        );
+        super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false)
+            .generate(
+                "path",
+                super::FullFilter {
+                    localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
+                    labels: Some(labels),
+                    silent: None,
+                },
+            );
     }
 }

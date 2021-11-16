@@ -32,8 +32,12 @@ impl DomainGenerator<'_> {
             "".to_string()
         };
         DomainGenerator {
-            custom_filter_generator: FilterGenerator::new("Custom Filters", domain_folder.clone()),
-            generic_filter_generator: FilterGenerator::new("Generic Filters", domain_folder),
+            custom_filter_generator: FilterGenerator::new(
+                "Custom Filters",
+                domain_folder.clone(),
+                false,
+            ),
+            generic_filter_generator: FilterGenerator::new("Generic Filters", domain_folder, true),
             secrets,
         }
     }
@@ -159,8 +163,8 @@ impl DomainGenerator<'_> {
 
 impl Retirable for DomainGenerator<'_> {
     fn retire(self) -> String {
-        self.generic_filter_generator.retire_with_unknown_filter()
-            + &self.custom_filter_generator.retire()
+        self.custom_filter_generator.retire()
+            + &self.generic_filter_generator.retire_with_unknown_filter()
     }
 }
 
