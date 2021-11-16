@@ -114,7 +114,7 @@ fn main() {
     for (i, (domain, sieve_domain_config)) in sieve_config.enumerate() {
         let (sieve_domain_config, secrets, domain_as_first_folder) = prepare(sieve_domain_config);
         sieve_code = sieve_code
-            + &format!("\n# Whitelist @{}", domain)
+            + &format!("\n# @{}", domain)
             + if i == 0 { "\nif" } else { "\n elsif" }
             + &format!(" envelope :domain :is \"to\" \"{}\" {{", domain)
             + &code_block({
