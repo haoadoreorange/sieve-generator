@@ -52,6 +52,10 @@ impl DomainGenerator<'_> {
         let mut skip_generic = false;
         let mut labels = None;
         let mut silent = Some(false); // for generic filter
+        if path == "Unknown" {
+            parent_silent = true; // Everything in Unknown is silent
+            skip_generic = true; // No need to have generic filter for Unknown
+        }
 
         // Custom filter
         match sub_config {
@@ -72,9 +76,6 @@ impl DomainGenerator<'_> {
                 self.custom_filter_generator.generate(path, full_filter);
             }
             SieveDomainConfig::Object(mut o) => {
-                if path == "Unknown" {
-                    skip_generic = true; // No need to have generic filter for Unknown
-                }
                 let mut fakeroot = false;
                 if let Some(SieveDomainConfig::Boolean(b)) = o.remove("fakeroot") {
                     fakeroot = b;
