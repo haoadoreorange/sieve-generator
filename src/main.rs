@@ -35,22 +35,20 @@ fn prepare(
         match options {
             serde_json::Value::Object(mut options) => {
                 if let Some(options_secrets) = options.remove("secrets") {
-                    match serde_json::from_value::<StringOrArray>(options_secrets)
+                    secrets = match serde_json::from_value::<StringOrArray>(options_secrets)
                         .unwrap()
                         .panic_on_empty("secrets")
                     {
-                        StringOrArray::String(secret) => secrets = vec![secret],
-                        StringOrArray::Array(options_secrets) => {
-                            secrets = options_secrets;
-                        }
-                    }
+                        StringOrArray::String(secret) => vec![secret],
+                        StringOrArray::Array(options_secrets) => options_secrets,
+                    };
                 }
                 if let Some(b) = options.remove("domain-as-first-folder") {
-                    if let serde_json::Value::Bool(b) = b {
-                        domain_as_first_folder = b;
+                    domain_as_first_folder = if let serde_json::Value::Bool(b) = b {
+                        b
                     } else {
                         panic!("Dear my beloved user...domain-as-first-folder must be boolean !");
-                    }
+                    };
                 }
             }
             _ => {

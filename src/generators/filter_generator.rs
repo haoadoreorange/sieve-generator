@@ -1,5 +1,5 @@
 use crate::{
-    common::{code_block, panic_on_empty},
+    common::{code_block, panic_on_empty_array_string},
     types::{FullFilter, PanicOnEmpty, Retirable, StringOrArray},
 };
 use std::collections::{BTreeMap, HashSet};
@@ -39,7 +39,9 @@ impl<'a> FilterGenerator<'a> {
                     vec![localpart]
                 }
             }
-            StringOrArray::Array(localparts) => panic_on_empty(localparts, "localparts"),
+            StringOrArray::Array(localparts) => {
+                panic_on_empty_array_string(localparts, "localparts")
+            }
         };
 
         let labels = if let Some(full_filter_labels) = full_filter.labels {

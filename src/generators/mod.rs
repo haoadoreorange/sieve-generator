@@ -97,7 +97,7 @@ impl DomainGenerator<'_> {
                 let sub_config_length = o.len();
                 for (sub, next_sub_config) in o.drain() {
                     if sub.is_empty() {
-                        panic!("Oups...the string '{}' cannot be used for folder name", sub);
+                        panic!("Oups...the empty string cannot be used for folder name");
                     }
                     let tmp: String;
                     let new_path = if path.is_empty() {
@@ -140,7 +140,7 @@ impl DomainGenerator<'_> {
         if !path.is_empty() && !skip_generic {
             let mut prefix_generic_lps = vec![path_to_prefix_generic_localpart(path)];
             if !fakeroot_path.is_empty() {
-                prefix_generic_lps.push(path_to_prefix_generic_localpart(fakeroot_path));
+                prefix_generic_lps = vec![path_to_prefix_generic_localpart(fakeroot_path)];
             }
             self.generic_filter_generator.generate(
                 path,
@@ -241,19 +241,19 @@ if envelope :localpart :matches "to" ["bank-account"] {
 # Generic Filters
 elsif envelope :localpart :matches "to" ["finance.slyth","finance.slyth.*"] {
     fileinto "Finance";
-} elsif envelope :localpart :matches "to" ["finance.bank.slyth","finance.bank.slyth.*","bank.slyth","bank.slyth.*"] {
+} elsif envelope :localpart :matches "to" ["bank.slyth","bank.slyth.*"] {
     fileinto "Finance";
     fileinto "Finance/Bank";
     if header :contains "subject" ["statement"] {
         fileinto "statement";
     }
-} elsif envelope :localpart :matches "to" ["finance.bank2.slyth","finance.bank2.slyth.*","bank2.slyth","bank2.slyth.*"] {
+} elsif envelope :localpart :matches "to" ["bank2.slyth","bank2.slyth.*"] {
     fileinto "Finance";
     fileinto "Finance/Bank2";
     if header :contains "subject" ["statement"] {
         fileinto "statement";
     }
-} elsif envelope :localpart :matches "to" ["finance.stock-markets.slyth","finance.stock-markets.slyth.*","stock-markets.slyth","stock-markets.slyth.*"] {
+} elsif envelope :localpart :matches "to" ["stock-markets.slyth","stock-markets.slyth.*"] {
     fileinto "Finance";
     fileinto "Finance/Stock markets";
 } elsif envelope :localpart :matches "to" ["newsletter.slyth","newsletter.slyth.*"] {
@@ -286,7 +286,7 @@ elsif envelope :localpart :matches "to" ["finance.slyth","finance.slyth.*"] {
     }
 
     #[test]
-    #[should_panic(expected = "'' cannot be used")]
+    #[should_panic(expected = "empty string cannot be used")]
     fn domain_generator_panic_folder_cannot_be_empty_string() {
         super::DomainGenerator::new("domain", vec!["slyth".to_string()], false).generate(
             serde_json::from_str::<super::SieveDomainConfig>(r#"{"folder1": { "": true } }"#)
