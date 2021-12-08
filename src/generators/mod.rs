@@ -50,12 +50,13 @@ impl DomainGenerator<'_> {
         mut parent_silent: bool,
     ) {
         let mut skip_generic = false;
-        let mut silent = Some(false); // for generic filter
+        let mut silent = None; // for generic filter
         let mut labels = None;
         if path == "Unknown" {
             parent_silent = true; // Everything in Unknown is silent
             skip_generic = true; // No need to have generic filter for Unknown
         }
+        println!("path {}: {}", path, parent_silent);
 
         // Custom filter
         match sub_config {
@@ -158,7 +159,7 @@ impl DomainGenerator<'_> {
                             .concat(),
                     ),
                     labels,
-                    silent,
+                    silent: Some(silent.unwrap_or(parent_silent)),
                     generic: None,
                 },
             );
