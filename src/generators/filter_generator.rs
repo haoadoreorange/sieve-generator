@@ -2,7 +2,7 @@ use crate::{
     common::{code_block, panic_on_empty},
     types::{FullFilter, PanicOnEmpty, Retirable, StringOrArray},
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug)]
 pub struct FilterGenerator<'a> {
@@ -90,7 +90,7 @@ impl<'a> FilterGenerator<'a> {
                 + " {"
                 + &code_block({
                     let mut cumulated_path = "".to_string();
-                    let mut result = "".to_string();
+                    let mut file_into = "".to_string();
                     for folder in path.split('/').collect::<Vec<_>>() {
                         if cumulated_path.is_empty() {
                             cumulated_path = folder.to_string();
@@ -98,48 +98,58 @@ impl<'a> FilterGenerator<'a> {
                             cumulated_path = format!("{}/{}", cumulated_path, folder);
                         }
                         if cumulated_path != "Unknown" {
-                            result = result
+                            file_into = file_into
                                 + &format!(
                                     "\nfileinto \"{}{}\";",
                                     self.domain_folder, cumulated_path
                                 )
                         }
                     }
-                    result
+                    file_into
                 })
                 + &code_block({
-                    let mut all_keywords = vec![];
-                    let mut result = "".to_string();
+                    let mut labels = "".to_string();
+                    let mut all_keywords = HashSet::new();
+                    let mut multiple_labels = false;
                     if let Some(full_filter_labels) = full_filter.labels {
-                        for (label, mut keywords) in full_filter_labels.into_iter() {
-                            result = result
+                        if full_filter_labels.len() > 1 {
+                            multiple_labels = true;
+                        }
+                        for (label, keywords) in full_filter_labels.into_iter() {
+                            labels = labels
                                 + "\nif header :contains \"subject\" "
                                 + &serde_json::to_string(&keywords).unwrap()
                                 + " {"
                                 + &code_block(format!("\nfileinto \"{}\";", label))
                                 + "\n}";
-                            if full_filter.silent.unwrap_or(false) {
-                                all_keywords.append(&mut keywords)
+                            if full_filter.silent.unwrap_or(false) && multiple_labels {
+                                keywords.iter().for_each(|keyword| {
+                                    all_keywords.insert(keyword.clone());
+                                })
                             }
                         }
                     }
                     let silent = "\naddflag \"\\\\Seen\";\nfileinto \"unread\";".to_string();
                     if full_filter.silent.unwrap_or(false) {
                         // TODO: add test silent
-                        if !result.is_empty() {
-                            "\nif header :contains \"subject\" ".to_string()
-                                + &serde_json::to_string(&all_keywords).unwrap()
-                                + " {"
-                                + &code_block(result)
-                                + "\n}"
-                                + " else {"
+                        if !labels.is_empty() {
+                            (if multiple_labels {
+                                // TODO: Add test case
+                                "\nif header :contains \"subject\" ".to_string()
+                                    + &serde_json::to_string(&all_keywords).unwrap()
+                                    + " {"
+                                    + &code_block(labels)
+                                    + "\n}"
+                            } else {
+                                labels
+                            }) + " else {"
                                 + &code_block(silent)
                                 + "\n}"
                         } else {
                             silent
                         }
                     } else {
-                        result
+                        labels
                     }
                 })
                 + "\n}";
