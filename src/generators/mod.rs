@@ -56,7 +56,6 @@ impl DomainGenerator<'_> {
             parent_silent = true; // Everything in Unknown is silent
             skip_generic = true; // No need to have generic filter for Unknown
         }
-        println!("path {}: {}", path, parent_silent);
 
         // Custom filter
         match sub_config {
@@ -138,10 +137,11 @@ impl DomainGenerator<'_> {
 
         // Generic filter
         if !path.is_empty() && !skip_generic {
-            let mut prefix_generic_lps = vec![path_to_prefix_generic_localpart(path)];
-            if !fakeroot_path.is_empty() {
-                prefix_generic_lps = vec![path_to_prefix_generic_localpart(fakeroot_path)];
-            }
+            let prefix_generic_lps = if !fakeroot_path.is_empty() {
+                vec![path_to_prefix_generic_localpart(fakeroot_path)]
+            } else {
+                vec![path_to_prefix_generic_localpart(path)]
+            };
             self.generic_filter_generator.generate(
                 path,
                 FullFilter {

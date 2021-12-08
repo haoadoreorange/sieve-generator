@@ -1,5 +1,5 @@
 use crate::{
-    common::{code_block, panic_on_empty_array_string},
+    common::code_block,
     types::{FullFilter, PanicOnEmpty, Retirable, StringOrArray},
 };
 use std::collections::{BTreeMap, HashSet};
@@ -30,19 +30,16 @@ impl<'a> FilterGenerator<'a> {
             );
         }
 
-        let localparts = match full_filter.localparts {
-            StringOrArray::String(localpart) => {
-                if localpart.is_empty() {
-                    // Filters localpart can take an empty string to use only generic
-                    return self;
-                } else {
-                    vec![localpart]
-                }
+        if let StringOrArray::String(localpart) = &full_filter.localparts {
+            if localpart.is_empty() {
+                // Filters localpart can take an empty string to use only generic
+                return self;
             }
-            StringOrArray::Array(localparts) => {
-                panic_on_empty_array_string(localparts, "localparts")
-            }
-        };
+        }
+        let localparts = full_filter
+            .localparts
+            .panic_on_empty("localparts")
+            .to_array();
 
         let labels = if let Some(full_filter_labels) = full_filter.labels {
             let mut labels = BTreeMap::new();
@@ -50,13 +47,7 @@ impl<'a> FilterGenerator<'a> {
                 if label.is_empty() {
                     panic!("Label cannot be empty string");
                 }
-                labels.insert(
-                    label,
-                    match keywords.panic_on_empty("label keywords") {
-                        StringOrArray::String(keyword) => vec![keyword],
-                        StringOrArray::Array(keywords) => keywords,
-                    },
-                );
+                labels.insert(label, keywords.panic_on_empty("label keywords").to_array());
             }
             Some(labels)
         } else {

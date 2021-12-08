@@ -15,6 +15,18 @@ pub fn code_block<T: AsRef<str>>(s: T) -> String {
     indentasy::indent(s, 1, 4)
 }
 
+impl StringOrArray {
+    pub fn to_array(self) -> Vec<String> {
+        // TODO: Add test
+        match self {
+            StringOrArray::String(s) => {
+                vec![s]
+            }
+            StringOrArray::Array(array) => array,
+        }
+    }
+}
+
 impl AsRef<StringOrArray> for StringOrArray {
     fn as_ref(&self) -> &StringOrArray {
         self
@@ -41,19 +53,14 @@ fn _panic_on_empty<T: AsRef<StringOrArray>>(arg: T, variable_name: &str) -> T {
             }
         }
         StringOrArray::Array(value) => {
-            panic_on_empty_array_string(value, variable_name);
-        }
-    }
-    arg
-}
-
-pub fn panic_on_empty_array_string<T: AsRef<Vec<String>>>(arg: T, variable_name: &str) -> T {
-    if arg.as_ref().is_empty() {
-        panic!("Array of {} cannot be empty", variable_name);
-    }
-    for string in arg.as_ref() {
-        if string.is_empty() {
-            panic!("Array of {} cannot contain empty string", variable_name);
+            if value.is_empty() {
+                panic!("Array of {} cannot be empty", variable_name);
+            }
+            for string in value {
+                if string.is_empty() {
+                    panic!("Array of {} cannot contain empty string", variable_name);
+                }
+            }
         }
     }
     arg

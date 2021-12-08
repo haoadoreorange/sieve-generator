@@ -35,20 +35,13 @@ fn prepare(
         match options {
             serde_json::Value::Object(mut options) => {
                 if let Some(options_secrets) = options.remove("secrets") {
-                    secrets = match serde_json::from_value::<StringOrArray>(options_secrets)
+                    secrets = serde_json::from_value::<StringOrArray>(options_secrets)
                         .unwrap()
                         .panic_on_empty("secrets")
-                    {
-                        StringOrArray::String(secret) => vec![secret],
-                        StringOrArray::Array(options_secrets) => options_secrets,
-                    };
+                        .to_array();
                 }
                 if let Some(b) = options.remove("domain-as-first-folder") {
-                    domain_as_first_folder = if let serde_json::Value::Bool(b) = b {
-                        b
-                    } else {
-                        panic!("Dear my beloved user...domain-as-first-folder must be boolean !");
-                    };
+                    domain_as_first_folder = serde_json::from_value::<bool>(b).unwrap();
                 }
             }
             _ => {
@@ -197,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "must be boolean")]
+    #[should_panic(expected = "expected a boolean")]
     fn prepare_panic_options_first_folder_not_boolean() {
         super::prepare(
             serde_json::from_str::<super::HashMap<String, serde_json::Value>>(
