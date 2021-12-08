@@ -51,31 +51,24 @@ impl DomainGenerator<'_> {
     ) {
         let mut skip_generic = false;
         let mut labels = None;
+        let mut silent = Some(false); // for generic filter
+
         // Custom filter
         match sub_config {
-            SieveDomainConfig::SimpleFilter(StringOrArray::String(s)) => {
+            SieveDomainConfig::SimpleFilter(localparts) => {
                 self.custom_filter_generator.generate(
                     path,
                     FullFilter {
-                        localparts: StringOrArray::String(s),
+                        localparts,
                         labels: None,
                         silent: Some(parent_silent),
                     },
                 );
             }
-            SieveDomainConfig::SimpleFilter(StringOrArray::Array(l)) => {
-                self.custom_filter_generator.generate(
-                    path,
-                    FullFilter {
-                        localparts: StringOrArray::Array(l),
-                        labels: None,
-                        silent: Some(parent_silent),
-                    },
-                );
-            }
-            SieveDomainConfig::FullFilter(full_filter) => {
+            SieveDomainConfig::FullFilter(mut full_filter) => {
                 labels = full_filter.labels.clone();
-                parent_silent = full_filter.silent.unwrap_or(parent_silent);
+                full_filter.silent = Some(full_filter.silent.unwrap_or(parent_silent));
+                silent = full_filter.silent;
                 self.custom_filter_generator.generate(path, full_filter);
             }
             SieveDomainConfig::Object(mut o) => {
@@ -149,7 +142,7 @@ impl DomainGenerator<'_> {
                             .concat(),
                     ),
                     labels,
-                    silent: Some(parent_silent),
+                    silent,
                 },
             );
         }
