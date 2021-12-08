@@ -126,7 +126,7 @@ impl DomainGenerator<'_> {
                     self._generate(
                         next_sub_config,
                         new_path,
-                        if fakeroot { &sub } else { "" },
+                        if fakeroot && sub != "self" { &sub } else { "" },
                         parent_silent,
                     );
                 }
