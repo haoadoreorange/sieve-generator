@@ -67,6 +67,7 @@ impl<'a> FilterGenerator<'a> {
                 localparts,
                 labels,
                 silent: full_filter.silent,
+                generic: None,
             },
         );
         self
@@ -189,6 +190,7 @@ mod tests {
                 ]),
                 labels: None,
                 silent: None,
+                generic: None,
             },
         )
         .generate(
@@ -200,6 +202,7 @@ mod tests {
                 ]),
                 labels: None,
                 silent: None,
+                generic: None,
             },
         );
         assert_eq!(
@@ -214,6 +217,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
     fileinto "@domain/Home bills/grocery";
 } else {
     fileinto "Unknown";
+    addflag "\\Seen";
 }"#
         );
     }
@@ -228,6 +232,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
                     localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
                     labels: None,
                     silent: None,
+                    generic: None,
                 },
             );
     }
@@ -242,6 +247,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
                 localparts: super::StringOrArray::String("".to_string()),
                 labels: None,
                 silent: None,
+                generic: None,
             },
         );
         assert_eq!(fg.retire(), "");
@@ -259,6 +265,7 @@ if envelope :localpart :matches "to" ["home-bills.electricity","custom"] {
                     localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
                     labels: Some(labels),
                     silent: None,
+                    generic: None,
                 },
             );
     }

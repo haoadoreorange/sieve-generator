@@ -50,8 +50,8 @@ impl DomainGenerator<'_> {
         mut parent_silent: bool,
     ) {
         let mut skip_generic = false;
-        let mut labels = None;
         let mut silent = Some(false); // for generic filter
+        let mut labels = None;
         if path == "Unknown" {
             parent_silent = true; // Everything in Unknown is silent
             skip_generic = true; // No need to have generic filter for Unknown
@@ -66,16 +66,22 @@ impl DomainGenerator<'_> {
                         localparts,
                         labels: None,
                         silent: Some(parent_silent),
+                        generic: None,
                     },
                 );
             }
             SieveDomainConfig::FullFilter(mut full_filter) => {
-                labels = full_filter.labels.clone();
+                skip_generic = !full_filter.generic.unwrap_or(true);
                 full_filter.silent = Some(full_filter.silent.unwrap_or(parent_silent));
                 silent = full_filter.silent;
+                labels = full_filter.labels.clone();
                 self.custom_filter_generator.generate(path, full_filter);
             }
             SieveDomainConfig::Object(mut o) => {
+                if o.is_empty() {
+                    // TODO: Add test
+                    panic!("This is an empty sieve config, are you high ?");
+                }
                 let mut fakeroot = false;
                 if let Some(SieveDomainConfig::Boolean(b)) = o.remove("fakeroot") {
                     fakeroot = b;
@@ -83,6 +89,11 @@ impl DomainGenerator<'_> {
                 if let Some(SieveDomainConfig::Boolean(b)) = o.remove("silent") {
                     parent_silent = b; // TODO: add test parent silent
                 }
+                if o.is_empty() {
+                    // TODO: Add test
+                    panic!("Hm...fakeroot & silent for an empty sieve config, are you high ?");
+                }
+                let sub_config_length = o.len();
                 for (sub, next_sub_config) in o.drain() {
                     if sub.is_empty() {
                         panic!("Oups...the string '{}' cannot be used for folder name", sub);
@@ -94,6 +105,10 @@ impl DomainGenerator<'_> {
                         }
                         &sub
                     } else if sub == "self" {
+                        if sub_config_length == 1 {
+                            // TODO: Add test
+                            panic!("Hm...Why use 'self' if there is no sub-folder, are you high ?");
+                        }
                         // if self field exist, generic filter generator for current path will be run again
                         // in next recursive with more detailed info BEFORE the current recursive,
                         // hence making the current obsolete. Not skipping it will result in
@@ -144,6 +159,7 @@ impl DomainGenerator<'_> {
                     ),
                     labels,
                     silent,
+                    generic: None,
                 },
             );
         }
@@ -207,8 +223,22 @@ mod tests {
         assert_eq!(
             g.retire(),
             r#"
+# Custom Filters
+if envelope :localpart :matches "to" ["bank-account"] {
+    fileinto "Finance";
+    fileinto "Finance/Bank";
+    if header :contains "subject" ["statement"] {
+        fileinto "statement";
+    }
+} elsif envelope :localpart :matches "to" ["broker1","broker2"] {
+    fileinto "Finance";
+    fileinto "Finance/Stock markets";
+} elsif envelope :localpart :matches "to" ["wallstreet"] {
+    fileinto "Newsletter";
+    fileinto "Newsletter/Business";
+}
 # Generic Filters
-if envelope :localpart :matches "to" ["finance.slyth","finance.slyth.*"] {
+elsif envelope :localpart :matches "to" ["finance.slyth","finance.slyth.*"] {
     fileinto "Finance";
 } elsif envelope :localpart :matches "to" ["finance.bank.slyth","finance.bank.slyth.*","bank.slyth","bank.slyth.*"] {
     fileinto "Finance";
@@ -232,20 +262,7 @@ if envelope :localpart :matches "to" ["finance.slyth","finance.slyth.*"] {
     fileinto "Newsletter/Business";
 } else {
     fileinto "Unknown";
-}
-# Custom Filters
-if envelope :localpart :matches "to" ["bank-account"] {
-    fileinto "Finance";
-    fileinto "Finance/Bank";
-    if header :contains "subject" ["statement"] {
-        fileinto "statement";
-    }
-} elsif envelope :localpart :matches "to" ["broker1","broker2"] {
-    fileinto "Finance";
-    fileinto "Finance/Stock markets";
-} elsif envelope :localpart :matches "to" ["wallstreet"] {
-    fileinto "Newsletter";
-    fileinto "Newsletter/Business";
+    addflag "\\Seen";
 }"#
         );
     }
