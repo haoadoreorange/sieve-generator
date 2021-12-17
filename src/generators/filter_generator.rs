@@ -83,25 +83,6 @@ impl<'a> FilterGenerator<'a> {
                 + &serde_json::to_string(&full_filter.localparts).unwrap()
                 + " {"
                 + &code_block({
-                    let mut cumulated_path = "".to_string();
-                    let mut file_into = "".to_string();
-                    for folder in path.split('/').collect::<Vec<_>>() {
-                        if cumulated_path.is_empty() {
-                            cumulated_path = folder.to_string();
-                        } else {
-                            cumulated_path = format!("{}/{}", cumulated_path, folder);
-                        }
-                        if cumulated_path != "Unknown" {
-                            file_into = file_into
-                                + &format!(
-                                    "\nfileinto \"{}{}\";",
-                                    self.domain_folder, cumulated_path
-                                )
-                        }
-                    }
-                    file_into
-                })
-                + &code_block({
                     let mut labels = "".to_string();
                     let mut all_keywords = HashSet::new();
                     let mut multiple_labels = false;
@@ -146,6 +127,25 @@ impl<'a> FilterGenerator<'a> {
                         labels
                     }
                 })
+                + &code_block({
+                    let mut cumulated_path = "".to_string();
+                    let mut file_into = "".to_string();
+                    for folder in path.split('/').collect::<Vec<_>>() {
+                        if cumulated_path.is_empty() {
+                            cumulated_path = folder.to_string();
+                        } else {
+                            cumulated_path = format!("{}/{}", cumulated_path, folder);
+                        }
+                        if cumulated_path != "Unknown" {
+                            file_into = file_into
+                                + &format!(
+                                    "\nfileinto \"{}{}\";",
+                                    self.domain_folder, cumulated_path
+                                )
+                        }
+                    }
+                    file_into
+                })
                 + "\n}";
         }
         result
@@ -154,7 +154,7 @@ impl<'a> FilterGenerator<'a> {
     pub fn retire_with_unknown_filter(self) -> String {
         self.retire()
             + " else {"
-            + &code_block("\nfileinto \"Unknown\";\naddflag \"\\\\Seen\";")
+            + &code_block("\naddflag \"\\\\Seen\";\nfileinto \"Unknown\";")
             + "\n}"
     }
 }
