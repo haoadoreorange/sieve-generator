@@ -1,0 +1,26 @@
+{
+    "domain.com": {
+        "options": {
+            "domain-as-first-folder": false
+        },
+        "Newsletter": {
+            "Software": ["google", "facebook"],
+            "Business": "wallstreet"
+        },
+        "Utilities": {
+            "self": ["electricity"],
+            "Grocery": {
+                "localparts": "market",
+                "labels": {
+                    "label": "keyword",
+                    "label2": ["keyword2"]
+                },
+                "options": {
+                    "orphan": true,
+                    "silent": true,
+                    "generic": false
+                }
+            }
+        }
+    }
+}

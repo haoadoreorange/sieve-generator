@@ -1,0 +1,16 @@
+[package]
+name = "sieve-generator"
+version = "0.3.0"
+authors = ["haoadoresorange <github@comtam.dev>"]
+description = "Sieve filter generator"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.4"
+lazy_static = "1.4"
+clap = { version = "4.0", features = ["derive"] }
+indentasy = "0.3.0"
