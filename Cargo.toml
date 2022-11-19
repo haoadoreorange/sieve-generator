@@ -1,9 +1,11 @@
 [package]
 name = "sieve-generator"
-version = "0.3.0"
-authors = ["haoadoresorange <github@comtam.dev>"]
-description = "Sieve filter generator"
+version = "0.3.1"
 edition = "2018"
+description = "Sieve filter generator"
+license = "MIT"
+repository = "https://github.com/haoadoresorange/sieve-generator.git"
+authors = ["haoadoresorange <github@comtam.dev>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
