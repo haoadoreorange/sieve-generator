@@ -3,6 +3,10 @@
 This is a CLI used to generate `.sieve` email filter allowlist for different folders based on the receiver email address, configured with a `JSON` file. I have a catch-all email domain and use it automates the allowlist creating process whenever I use a new email. (e.g. `something@domain.com` filtered to `something`
 folder)
 
+### Installation
+
+`cargo install sieve-generator` or download the binary, only tested on Linux.
+
 ### Usage
 
 Let say we have `JSON` config file like this
@@ -58,3 +62,50 @@ A `.sieve` filter allowlist will be generated in which
 - Every mails that are not allowlisted will be put in an `Unknown` folder by
     default.
 - `Unknown` is a special folder, everything go there will be silent, even if explicitly configured.
+
+The `JSON` above will produce
+
+```
+# @domain.com
+if envelope :domain :is "to" "domain.com" {
+    # Custom filters
+    if envelope :localpart :matches "to" ["market"] {
+        if header :contains ["from","subject"] ["keyword","keyword2"] {
+            if header :contains ["from","subject"] ["keyword"] {
+                fileinto "label";
+            }
+            if header :contains ["from","subject"] ["keyword2"] {
+                fileinto "label2";
+            }
+        } else {
+            addflag "\\Seen";
+            fileinto "unread";
+        }
+        fileinto "Utilities";
+        fileinto "Utilities/Grocery";
+    } elsif envelope :localpart :matches "to" ["electricity"] {
+        fileinto "Utilities";
+    } elsif envelope :localpart :matches "to" ["google","facebook"] {
+        fileinto "Newsletter";
+        fileinto "Newsletter/Software";
+    } elsif envelope :localpart :matches "to" ["wallstreet"] {
+        fileinto "Newsletter";
+        fileinto "Newsletter/Business";
+    }
+    # Generic filters
+    elsif envelope :localpart :matches "to" ["utilities","utilities.*"] {
+        fileinto "Utilities";
+    } elsif envelope :localpart :matches "to" ["newsletter.software","newsletter.software.*"] {
+        fileinto "Newsletter";
+        fileinto "Newsletter/Software";
+    } elsif envelope :localpart :matches "to" ["newsletter.business","newsletter.business.*"] {
+        fileinto "Newsletter";
+        fileinto "Newsletter/Business";
+    } elsif envelope :localpart :matches "to" ["newsletter","newsletter.*"] {
+        fileinto "Newsletter";
+    } else {
+        addflag "\\Seen";
+        fileinto "Unknown";
+    }
+}
+```

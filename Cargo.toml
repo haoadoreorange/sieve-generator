@@ -1,6 +1,6 @@
 [package]
 name = "sieve-generator"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2018"
 description = "Sieve filter generator"
 license = "MIT"
