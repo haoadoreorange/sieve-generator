@@ -81,6 +81,10 @@ impl DomainGenerator<'_> {
                 labels = full_filter.labels.clone();
                 if let Some(full_filter_options) = full_filter.options {
                     options = options.mask_with(&full_filter_options);
+                    // TODO: add test
+                    if !options.generic.unwrap() && full_filter_options.orphan.is_some() {
+                        panic!("Not generating generic filters for {}, set orphan option is useless", path);
+                    }
                 }
                 full_filter.options = Some(options.clone());
                 self.custom_filter_generator.generate(path, full_filter);
@@ -121,9 +125,11 @@ impl DomainGenerator<'_> {
         }
 
         // Generic filter
-        if !path.is_empty() && options.generic.unwrap() {
+        if options.generic.unwrap() && !path.is_empty() {
             let prefix_generic_lps = vec![path_to_prefix_generic_localpart(
                 if options.orphan.unwrap() {
+                    // TODO: add test
+                    if !path.contains("/") { panic!("Why orphan a top level folder ({}) ?", path) }
                     last_folder_of_path(path)
                 } else {
                     path
