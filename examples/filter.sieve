@@ -3,19 +3,14 @@
 if envelope :domain :is "to" "domain.com" {
     # Custom filters
     if envelope :localpart :matches "to" ["market"] {
-        if header :contains ["from","subject"] ["keyword","keyword2"] {
-            if header :contains ["from","subject"] ["keyword"] {
-                fileinto "label";
-            }
-            if header :contains ["from","subject"] ["keyword2"] {
-                fileinto "label2";
-            }
+        fileinto "Utilities";
+        fileinto "Utilities/Grocery";
+        if header :contains ["from","subject"] ["keyword"] {
+            fileinto "label";
         } else {
             addflag "\\Seen";
             fileinto "unread";
         }
-        fileinto "Utilities";
-        fileinto "Utilities/Grocery";
     } elsif envelope :localpart :matches "to" ["electricity"] {
         fileinto "Utilities";
     } elsif envelope :localpart :matches "to" ["google","facebook"] {
@@ -26,9 +21,30 @@ if envelope :domain :is "to" "domain.com" {
         fileinto "Newsletter/Business";
     }
     # Generic filters
-    elsif envelope :localpart :matches "to" ["utilities","utilities.*"] {
+    elsif envelope :localpart :matches "to" ["grocery","grocery.*"] {
         fileinto "Utilities";
-    } elsif envelope :localpart :matches "to" ["newsletter.software","newsletter.software.*"] {
+        fileinto "Utilities/Grocery";
+        if header :contains ["from","subject"] ["keyword"] {
+            fileinto "label";
+        } else {
+            addflag "\\Seen";
+            fileinto "unread";
+        }
+    } elsif envelope :localpart :matches "to" ["bill","bill.*"] {
+        fileinto "Utilities";
+        fileinto "Utilities/Bill";
+        if header :contains ["from","subject"] ["keyword2","keyword3"] {
+            if header :contains ["from","subject"] ["keyword2"] {
+                fileinto "label2";
+            }
+            if header :contains ["from","subject"] ["keyword3"] {
+                fileinto "label3";
+            }
+        } else {
+            addflag "\\Seen";
+            fileinto "unread";
+        }
+    } elsif envelope :localpart :matches "to" ["software","software.*"] {
         fileinto "Newsletter";
         fileinto "Newsletter/Software";
     } elsif envelope :localpart :matches "to" ["newsletter.business","newsletter.business.*"] {

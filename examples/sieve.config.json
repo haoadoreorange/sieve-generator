@@ -5,20 +5,37 @@
         },
         "Newsletter": {
             "Software": ["google", "facebook"],
-            "Business": "wallstreet"
+            "Business": {
+                "localparts": "wallstreet",
+                "options": {
+                    "fullpath": true
+                }
+            }
         },
         "Utilities": {
-            "self": ["electricity"],
+            "self": {
+                "localparts": ["electricity"],
+                "options": {
+                    "generic": false
+                }
+            },
             "Grocery": {
                 "localparts": "market",
                 "labels": {
-                    "label": "keyword",
-                    "label2": ["keyword2"]
+                    "label": "keyword"
                 },
                 "options": {
-                    "orphan": true,
-                    "silent": true,
-                    "generic": false
+                    "mark-as-read": true
+                }
+            },
+            "Bill": {
+                "localparts": "",
+                "labels": {
+                    "label2": ["keyword2"],
+                    "label3": ["keyword3"]
+                },
+                "options": {
+                    "mark-as-read": true
                 }
             }
         }

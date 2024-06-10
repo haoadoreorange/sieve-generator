@@ -13,6 +13,5 @@ authors = ["haoadoresorange <github@comtam.dev>"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 regex = "1.4"
-lazy_static = "1.4"
 clap = { version = "4.0", features = ["derive"] }
 indentasy = "0.3.0"

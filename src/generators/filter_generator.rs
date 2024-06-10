@@ -1,5 +1,8 @@
-use crate::common::{code_block, FilterOptions, FullFilter, StringOrVec, is_unknown};
-use std::collections::{BTreeMap, HashSet};
+use crate::common::{code_block, is_unknown, FilterOptions, FullFilter, StringOrVec};
+use std::{
+    collections::{BTreeMap, HashSet},
+    fmt::{self, Display},
+};
 
 #[derive(Debug)]
 pub struct FilterGenerator<'a> {
@@ -28,7 +31,7 @@ impl<'a> FilterGenerator<'a> {
         //
         if path.is_empty() {
             panic!(
-                "BUG: calling {}.generate() with empty folder path, something is wrong.",
+                "ERROR: calling {}.generate() with empty folder path, something is wrong.",
                 self.name
             );
         }
@@ -38,13 +41,16 @@ impl<'a> FilterGenerator<'a> {
             }
         }
 
-        /* Convert StringOrVec to Vec before insert for easier into String. */
+        /* Convert StringOrVec to Vec before insert for easier to_string(). */
         let localparts: Vec<String> = full_filter.localparts.panic_on_empty("localparts").into();
         let labels = if let Some(full_filter_labels) = full_filter.labels {
             let mut labels = BTreeMap::new();
             for (label, keywords) in full_filter_labels.into_iter() {
                 StringOrVec::String(label.clone()).panic_on_empty("label");
-                labels.insert(label, keywords.panic_on_empty("label keywords").into());
+                labels.insert(
+                    label,
+                    Vec::<String>::from(keywords.panic_on_empty("label keywords")),
+                );
             }
             Some(labels)
         } else {
@@ -62,25 +68,25 @@ impl<'a> FilterGenerator<'a> {
         self
     }
 
-    pub fn into_string_with_unknown(self) -> String {
-        Into::<String>::into(self)
+    pub fn to_string_with_unknown(&self) -> String {
+        self.to_string()
             + " else {"
             + &code_block("\naddflag \"\\\\Seen\";\nfileinto \"Unknown\";")
             + "\n}"
     }
 }
 
-impl From<FilterGenerator<'_>> for String {
-    fn from(item: FilterGenerator<'_>) -> Self {
+impl Display for FilterGenerator<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = "".to_string();
         /* rev() is for generic filter, A/B must be filtered before A, otherwise a.b will all go to A, not A/B */
-        for (i, (path, full_filter)) in item.filters.into_iter().rev().enumerate() {
+        for (i, (path, full_filter)) in self.filters.iter().rev().enumerate() {
             result = result
                 + &if i == 0 {
                     format!(
                         "\n# {} filters\n{}if",
-                        item.name,
-                        if !item.begin_with_else { "" } else { "els" }
+                        self.name,
+                        if !self.begin_with_else { "" } else { "els" }
                     )
                 } else {
                     " elsif".to_string()
@@ -104,29 +110,30 @@ impl From<FilterGenerator<'_>> for String {
                         file_into = file_into
                             + &format!(
                                 "\nfileinto \"{}{}\";",
-                                item.domain_folder, cumulated_path
+                                self.domain_folder, cumulated_path
                             )
                     }
                     file_into
                 })
-                
+
                 /* Generate sieve code for labels. */
                 + &code_block({
                     let mut all_keywords = HashSet::new();
                     let mark_as_read = if full_filter.options.mark_as_read {
-                        "\naddflag \"\\\\Seen\";".to_string() + if !is_unknown(&path) 
-                        { 
+                        "\naddflag \"\\\\Seen\";".to_string() +
+                        if !is_unknown(&path) {
                             "\nfileinto \"unread\";"
-                        } else { 
-                            "" 
+                        } else {
+                            ""
                         }
                     } else {
                         "".to_string()
                     };
                     const IF_HEADER_CONTAINS: &str = "\nif header :contains [\"from\",\"subject\"] ";
-                    let labels = if let Some(full_filter_labels) = full_filter.labels {
+                    let labels = if let Some(full_filter_labels) = &full_filter.labels {
                         /*
                          * 1 mail can have multiple labels, thus we cannot use if else but only if
+                         * ```
                          * if () {
                          *     fileinto label 1
                          * }
@@ -136,15 +143,15 @@ impl From<FilterGenerator<'_>> for String {
                          * else {
                          *     mark as seen
                          * }
-                         * but we need an else to mark as read if not having any label
-                         * (by default label overwrite mark-as-read option).
-                         * This wouldn't work since else apply only to the last if
-                         * therefore we need this flag to know when to wrap those if in a big if
-                         * that contains all the keywords.
+                         * ```
+                         * but we need an else to mark as read if no label condition is met (by default label overwrite mark-as-read option). This wouldn't
+                         * work since else apply only to the last if. Therefore we need
+                         * this flag to know when to wrap those if in a big if that contains
+                         * all the keywords.
                         */
                         let multiple_labels = full_filter_labels.len() > 1;
                         let mut labels = "".to_string();
-                        for (label, keywords) in full_filter_labels.into_iter() {
+                        for (label, keywords) in full_filter_labels.iter() {
                             labels = labels
                                 + IF_HEADER_CONTAINS
                                 + &serde_json::to_string(&keywords).unwrap()
@@ -188,195 +195,6 @@ impl From<FilterGenerator<'_>> for String {
                 })
                 + "\n}";
         }
-        result
+        write!(f, "{}", result)
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::types::FilterOptions;
-
-//     #[test]
-//     fn filter_generator() {
-//         let mut labels = super::BTreeMap::new();
-//         labels.insert(
-//             "label".to_string(),
-//             super::StringOrArray::Array(vec!["l".to_string()]),
-//         );
-//         let mut fg = super::FilterGenerator::new("Test", "@domain/".to_string(), false);
-//         fg.generate(
-//             "Home bills/zrocery",
-//             super::FullFilter {
-//                 localparts: super::StringOrArray::Array(vec!["custom".to_string()]),
-//                 labels: None,
-//                 options: Some(FilterOptions {
-//                     generic: None,
-//                     orphan: None,
-//                     silent: Some(true),
-//                 }),
-//             },
-//         )
-//         .generate(
-//             "Home bills/trocery",
-//             super::FullFilter {
-//                 localparts: super::StringOrArray::Array(vec!["custom1".to_string()]),
-//                 labels: Some(labels.clone()),
-//                 options: Some(FilterOptions {
-//                     generic: None,
-//                     orphan: None,
-//                     silent: Some(true),
-//                 }),
-//             },
-//         );
-//         labels.insert(
-//             "label1".to_string(),
-//             super::StringOrArray::Array(vec!["l".to_string(), "m".to_string()]),
-//         );
-//         fg.generate(
-//             "Home bills/grocery",
-//             super::FullFilter {
-//                 localparts: super::StringOrArray::Array(vec![
-//                     "home-bills.grocery".to_string(),
-//                     "custom2".to_string(),
-//                 ]),
-//                 labels: Some(labels.clone()),
-//                 options: Some(FilterOptions {
-//                     generic: None,
-//                     orphan: None,
-//                     silent: Some(true),
-//                 }),
-//             },
-//         )
-//         .generate(
-//             "Home bills/frocery",
-//             super::FullFilter {
-//                 localparts: super::StringOrArray::Array(vec!["custom3".to_string()]),
-//                 labels: None,
-//                 options: None,
-//             },
-//         );
-//         assert_eq!(
-//             fg.into_string_with_unknown(),
-//             r#"
-// # Test filters
-// if envelope :localpart :matches "to" ["custom"] {
-//     addflag "\\Seen";
-//     fileinto "unread";
-//     fileinto "@domain/Home bills";
-//     fileinto "@domain/Home bills/zrocery";
-// } elsif envelope :localpart :matches "to" ["custom1"] {
-//     if header :contains ["from","subject"] ["l"] {
-//         fileinto "label";
-//     } else {
-//         addflag "\\Seen";
-//         fileinto "unread";
-//     }
-//     fileinto "@domain/Home bills";
-//     fileinto "@domain/Home bills/trocery";
-// } elsif envelope :localpart :matches "to" ["home-bills.grocery","custom2"] {
-//     if header :contains ["from","subject"] ["l","m"] {
-//         if header :contains ["from","subject"] ["l"] {
-//             fileinto "label";
-//         }
-//         if header :contains ["from","subject"] ["l","m"] {
-//             fileinto "label1";
-//         }
-//     } else {
-//         addflag "\\Seen";
-//         fileinto "unread";
-//     }
-//     fileinto "@domain/Home bills";
-//     fileinto "@domain/Home bills/grocery";
-// } elsif envelope :localpart :matches "to" ["custom3"] {
-//     fileinto "@domain/Home bills";
-//     fileinto "@domain/Home bills/frocery";
-// } else {
-//     addflag "\\Seen";
-//     fileinto "Unknown";
-// }"#
-//         );
-//     }
-
-//     #[test]
-//     #[should_panic(expected = "with empty folder path")]
-//     fn filter_generator_panic_empty_path() {
-//         super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false)
-//             .generate(
-//                 "",
-//                 super::FullFilter {
-//                     localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
-//                     labels: None,
-//                     options: None,
-//                 },
-//             );
-//     }
-
-//     #[test]
-//     fn filter_generator_empty_lp() {
-//         let mut fg =
-//             super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false);
-//         fg.generate(
-//             "path",
-//             super::FullFilter {
-//                 localparts: super::StringOrArray::String("".to_string()),
-//                 labels: None,
-//                 options: None,
-//             },
-//         );
-//         assert_eq!(Into::<String>::into(fg), "");
-//     }
-
-//     #[test]
-//     #[should_panic(expected = "Label cannot be empty")]
-//     fn filter_generator_panic_label_empty() {
-//         let mut labels = super::BTreeMap::new();
-//         labels.insert("".to_string(), super::StringOrArray::String("".to_string()));
-//         super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false)
-//             .generate(
-//                 "path",
-//                 super::FullFilter {
-//                     localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
-//                     labels: Some(labels),
-//                     options: None,
-//                 },
-//             );
-//     }
-
-//     #[test]
-//     #[should_panic(expected = "label keywords")]
-//     fn filter_generator_panic_label_keyword_empty() {
-//         let mut labels = super::BTreeMap::new();
-//         labels.insert(
-//             "label".to_string(),
-//             super::StringOrArray::String("".to_string()),
-//         );
-//         super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false)
-//             .generate(
-//                 "path",
-//                 super::FullFilter {
-//                     localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
-//                     labels: Some(labels),
-//                     options: None,
-//                 },
-//             );
-//     }
-
-//     #[test]
-//     #[should_panic(expected = "label keywords")]
-//     fn filter_generator_panic_label_keywords_empty() {
-//         let mut labels = super::BTreeMap::new();
-//         labels.insert(
-//             "label".to_string(),
-//             super::StringOrArray::Array(vec!["".to_string()]),
-//         );
-//         super::FilterGenerator::new("Test filter generator", "@domain/".to_string(), false)
-//             .generate(
-//                 "path",
-//                 super::FullFilter {
-//                     localparts: super::StringOrArray::Array(vec!["lp".to_string()]),
-//                     labels: Some(labels),
-//                     options: None,
-//                 },
-//             );
-//     }
-// }
